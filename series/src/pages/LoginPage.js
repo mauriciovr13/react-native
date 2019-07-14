@@ -1,10 +1,12 @@
 import React from 'react';
 import { View, StyleSheet, TextInput, Button, ActivityIndicator, Text } from 'react-native';
 import firebase from 'firebase';
+import { connect } from 'react-redux';
+import {tryLogin} from '../actions';
 
 import FormRow from '../components/FormRow';
 
-export default class LoginScreen extends React.Component{
+class LoginPage extends React.Component{
     constructor(props){
         super(props);
         this.state = {
@@ -35,49 +37,23 @@ export default class LoginScreen extends React.Component{
     }
 
     tryLogin() {
-        this.setState({ isLoading: true, message: '' })
-        const { mail, password } = this.state
+        this.setState({ isLoading: true, message: '' });
+        const { mail: email, password } = this.state;
 
-        const loginUserSuccess = user => {
-            this.setState({ message: 'Sucesso!' });
-            this.props.navigation.navigate('Main');
-        }
-
-        const loginUserFailed = error => {
-            this.setState({ message: this.getMessageByErrorCode(error.code) })
-        }
-
-        firebase
-            .auth()
-            .signInWithEmailAndPassword(mail, password)
-            .then(loginUserSuccess)
-            .catch(error => {
-                if (error.code === 'auth/user-not-found') {
-                    alert.alert(
-                        'Usuário não encontrado', /* title */
-                        'Deseja criar um cadastro com as informações inseridas?', /* message */ 
-                        [
-                            {
-                                text: 'Não', 
-                                onPress: () => {}, 
-                                style: 'cancel' // IOS
-                            }, {
-                                text: 'Sim', 
-                                onPress: () => {
-                                    firebase
-                                        .auth()
-                                        .createUserWithEmailAndPassword(mail, password)
-                                        .then(loginUserSuccess)
-                                        .catch(loginUserFailed)
-                                },                                
-                            }
-                        ],
-                        { cancelable: false }
-                    )
-                }
-                return ;                
+        this.props.tryLogin({ email, password })
+            .then((user) => {
+                if(user) {
+                    return this.props.navigation.replace('Main');
+                } 
+                this.setState({ 
+                    isLoading: false,
+                    message: ''
+                });
             })
-            .then(() => this.setState({ isLoading: false }));
+            .catch(error => {
+                this.setState({ isLoading: false, message: this.getMessageByErrorCode(error.code) })
+            })
+
     }
 
     getMessageByErrorCode(errorCode) {
@@ -122,6 +98,9 @@ export default class LoginScreen extends React.Component{
                         placeholder="user@email.com"
                         value={this.state.mail}
                         onChangeText={value => this.onChangeHandler('mail', value)}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        autoCompleteType="off"
                         />
                 </FormRow>
                 <FormRow last>
@@ -149,4 +128,7 @@ const styles = StyleSheet.create({
         paddingRight: 5,
         paddingBottom: 5,
     }
-})
+});
+
+export default connect(null, { tryLogin })(LoginPage)
+
